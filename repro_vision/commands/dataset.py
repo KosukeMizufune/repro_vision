@@ -6,7 +6,8 @@ from torchvision.transforms import Compose, ToPILImage
 from repro_vision import transforms
 from repro_vision import datasets
 
-ROOT_DIR = Path('../../')
+ROOT_DIR = Path(__file__).parents[2]
+
 
 
 def get_dataset(config, train=True, transforms=None):
@@ -34,8 +35,8 @@ def get_loaders(config, train_transforms, val_transforms, num_workers=0):
     """
     config['dataset_root'] = ROOT_DIR / config['dataset_root']
 
-    train_dataset = get_dataset(config, 'train', transforms=train_transforms)
-    val_dataset = get_dataset(config, 'val', transforms=val_transforms)
+    train_dataset = get_dataset(config, transforms=train_transforms)
+    val_dataset = get_dataset(config, train=False, transforms=val_transforms)
 
     train_loader = DataLoader(train_dataset, config['batchsize'],
                               num_workers=num_workers,

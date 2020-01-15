@@ -2,6 +2,7 @@ import torch
 
 from ignite.engine.engine import Engine
 from ignite.utils import convert_tensor
+from ignite.metrics import Average
 
 
 def _prepare_batch(batch, device=None, non_blocking=False):
@@ -48,7 +49,10 @@ def create_classification_trainer(model, optimizer, loss_fn,
         optimizer.step()
         return output_transform(x, y, y_pred, loss)
 
-    return Engine(_update)
+    engine = Engine(_update)
+    metric_loss = Average()
+    metric_loss.attach(engine, 'loss')
+    return engine
 
 
 def create_classification_evaluator(model, metrics=None,

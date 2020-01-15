@@ -52,7 +52,6 @@ def train(trainer, evaluator, loaders, net, config):
     pbar.attach(trainer)
     pbar.attach(evaluator)
 
-    tb_logger = None
     config_file = config['config_file']
     train_loader, val_loader = loaders
 
@@ -61,7 +60,12 @@ def train(trainer, evaluator, loaders, net, config):
         evaluator.run(val_loader)
         print(f"Training loss is {trainer.state.metrics['loss']}")
 
-    if not config['debug']:
+    if config['debug']:
+        def print_loss(engine):
+            print(f"Training loss is {trainer.state.output}")
+        trainer.add_event_handler(Events.ITERATION_COMPLETED, print_loss)
+        tb_logger = None
+    else:
         start_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         res_dir = Path(config['output_dir']) / start_datetime
 

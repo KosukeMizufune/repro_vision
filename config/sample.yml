@@ -1,0 +1,31 @@
+train_augment:
+  RandomHorizontalFlip:
+    p: 0.5
+  Resize:
+    size: [224, 224]
+val_augment:
+  Resize:
+    size: [224, 224]
+dataset:
+  batchsize: 32
+  dataset_name: CIFAR10
+  dataset_root: 'data/'
+model:
+  model_name: SqueezeNet11
+  params:
+loss:
+  loss_name: CrossEntropyLoss
+  params:
+optimizer:
+  opt_name: SGD
+  params:
+    lr: 0.01
+    momentum: 0.9
+    weight_decay: 0.0005
+task: classification
+metrics:
+  Accuracy:
+model_checkpoint:
+  save_interval: 5
+  n_saved: 1
+epochs: 10

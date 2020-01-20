@@ -11,11 +11,9 @@ dataset:
   dataset_name: CIFAR10
   dataset_root: 'data/'
 model:
-  model_name: SqueezeNet11
-  params:
+  name: SqueezeNet11
 loss:
-  loss_name: CrossEntropyLoss
-  params:
+  name: CrossEntropyLoss
 optimizer:
   opt_name: SGD
   params:

@@ -1,1 +1,1 @@
-from torch.nn import CrossEntropyLoss  # noqa
+from repro_vision.functions.loss.cross_entropy import CrossEntropyLoss  # noqa

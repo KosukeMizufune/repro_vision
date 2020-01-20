@@ -1,3 +1,5 @@
+import logging
+
 import torch
 from torch import nn
 from torch.nn import init
@@ -88,8 +90,9 @@ class SqueezeNet10(SqueezeNetBase):
 
 
 class SqueezeNet11(SqueezeNetBase):
-    def __init__(self, n_classes, pretrained=True, progress=True):
+    def __init__(self, n_classes, pretrained=True, progress=True, logger=None):
         super(SqueezeNet11, self).__init__(n_classes)
+        self.logger = logger or logging.getLogger(__name__)
         self.features = nn.Sequential(
                 nn.Conv2d(3, 64, kernel_size=3, stride=2),
                 nn.ReLU(inplace=True),

@@ -1,10 +1,15 @@
+from logging import getLogger
+
 import click
 from ruamel import yaml
 
 from repro_vision.commands.dataset import get_loaders, get_transforms
 from repro_vision.commands.optimizer import get_optimizer
-from repro_vision.commands.model import get_net, get_criterion
+from repro_vision.commands.model import get_net, get_loss
 from repro_vision.commands.trainer import get_trainer, get_evaluator, train
+
+
+logger = getLogger(__name__)
 
 
 @click.command()
@@ -27,9 +32,9 @@ def main(ctx, config_file, **kwargs):
 
     n_class = len(loaders[0].dataset.labels)
     config['model'].update({'params': {'n_classes': n_class}})
-    net = get_net(config['model'])
 
-    criterion = get_criterion(config['loss'])
+    net = get_net(**config['model'], logger=logger)
+    criterion = get_loss(**config['loss'], logger=logger)
     optimizer = get_optimizer(net, config['optimizer'])
     trainer = get_trainer(net, optimizer, criterion, config)
     evaluator = get_evaluator(net, config)

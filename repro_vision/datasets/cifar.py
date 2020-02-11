@@ -4,7 +4,6 @@ import os.path
 import sys
 import pickle
 
-from PIL import Image
 import numpy as np
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import (check_integrity,

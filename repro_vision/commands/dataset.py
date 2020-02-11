@@ -9,7 +9,6 @@ from repro_vision import datasets
 ROOT_DIR = Path(__file__).parents[2]
 
 
-
 def get_dataset(config, train=True, transforms=None):
     dataset_klass = getattr(datasets, config['dataset_name'])
     dataset = dataset_klass(config['dataset_root'], train=train,

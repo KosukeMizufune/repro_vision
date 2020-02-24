@@ -101,6 +101,8 @@ class CIFAR10(VisionDataset):
 
         self.data = np.vstack(self.data).reshape(-1, 3, 32, 32)
         self.data = self.data.transpose((0, 2, 3, 1))  # convert to HWC
+        self.data = np.ascontiguousarray(self.data)
+        self.targets = np.stack(self.targets)
 
         self._load_meta()
 

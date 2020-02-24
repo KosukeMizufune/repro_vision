@@ -10,6 +10,7 @@ dataset:
   batchsize: 32
   dataset_name: CIFAR10
   dataset_root: 'data/'
+  use_dali: true
 model:
   name: SqueezeNet11
 loss:

@@ -61,9 +61,6 @@ def train(trainer, evaluator, loaders, net, config):
         print(f"Training loss is {trainer.state.metrics['loss']}")
 
     if config['debug']:
-        def print_loss(engine):
-            print(f"Training loss is {trainer.state.output}")
-        trainer.add_event_handler(Events.ITERATION_COMPLETED, print_loss)
         tb_logger = None
     else:
         start_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')

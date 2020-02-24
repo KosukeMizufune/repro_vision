@@ -5,6 +5,7 @@ from torchvision.transforms import Compose, ToPILImage
 
 from repro_vision import transforms
 from repro_vision import datasets
+from repro_vision.utils.dali_loader import SimplePipeline, DaliDataLoader
 
 ROOT_DIR = Path(__file__).parents[2]
 
@@ -34,13 +35,22 @@ def get_loaders(config, train_transforms, val_transforms, num_workers=0):
     """
     config['dataset_root'] = ROOT_DIR / config['dataset_root']
 
-    train_dataset = get_dataset(config, transforms=train_transforms)
-    val_dataset = get_dataset(config, train=False, transforms=val_transforms)
-
-    train_loader = DataLoader(train_dataset, config['batchsize'],
-                              num_workers=num_workers,
-                              shuffle=True)
-    val_loader = DataLoader(val_dataset, config['batchsize'],
-                            num_workers=num_workers,
-                            shuffle=False)
+    if config['use_dali']:
+        train_dataset = get_dataset(config, transforms=None)
+        val_dataset = get_dataset(config, train=False, transforms=None)
+        train_loader = DaliDataLoader(SimplePipeline(train_dataset,
+                                                     config['batchsize'], 4, 0),
+                                      50000)
+        val_loader = DaliDataLoader(SimplePipeline(val_dataset,
+                                                   config['batchsize'], 4, 0),
+                                    50000)
+    else:
+        train_dataset = get_dataset(config, transforms=train_transforms)
+        val_dataset = get_dataset(config, train=False, transforms=val_transforms)
+        train_loader = DataLoader(train_dataset, config['batchsize'],
+                                  num_workers=num_workers,
+                                  shuffle=True)
+        val_loader = DataLoader(val_dataset, config['batchsize'],
+                                num_workers=num_workers,
+                                shuffle=False)
     return train_loader, val_loader

@@ -49,18 +49,6 @@ class CIFAR10(VisionDataset):
         'key': 'label_names',
         'md5': '5ff9c542aee3614f3951f8cda6e48888',
     }
-    labels = (
-        'airplane',
-        'automobile',
-        'bird',
-        'cat',
-        'deer',
-        'dog',
-        'frog',
-        'horse',
-        'ship',
-        'truck'
-    )
 
     def __init__(self, root, train=True, transform=None, target_transform=None,
                  transforms=None, download=False):
@@ -103,6 +91,18 @@ class CIFAR10(VisionDataset):
         self.data = self.data.transpose((0, 2, 3, 1))  # convert to HWC
 
         self._load_meta()
+        self.label_names = (
+            'airplane',
+            'automobile',
+            'bird',
+            'cat',
+            'deer',
+            'dog',
+            'frog',
+            'horse',
+            'ship',
+            'truck'
+        )
 
     def _load_meta(self):
         path = os.path.join(self.root, self.base_folder, self.meta['filename'])

@@ -69,6 +69,9 @@ class SqueezeNetBase(nn.Module):
         x = self.classifier(x)
         return torch.flatten(x, 1)
 
+    def predict(self, x):
+        return self.forward(x)
+
 
 class SqueezeNet10(SqueezeNetBase):
     def __init__(self, n_classes, pretrained=True, progress=True):

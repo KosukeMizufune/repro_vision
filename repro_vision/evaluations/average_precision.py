@@ -369,6 +369,6 @@ def mean_over_class(metric):
     return np.mean(metric)
 
 
-def mAP(labels, iou_thresh, **kwargs):
+def mAP(labels, iou_thresh=0.5, **kwargs):
     ap = AveragePrecision(labels, iou_thresh=iou_thresh)
     return MetricsLambda(mean_over_class, ap)

@@ -677,7 +677,7 @@ class MultiboxLoss(nn.Module):
             localization loss.
         k (int or float): Parameter for hard negative mining.
     """
-    def __init__(self, coder, alpha=0.1, k=3):
+    def __init__(self, coder, alpha=1, k=3):
         super(MultiboxLoss, self).__init__()
         self.k = k
         self.alpha = alpha
@@ -701,6 +701,6 @@ def get_model(net_name, net_params, loss_params, n_class, coder_params,
 
     coder = MultiboxCoder(**coder_params)
     net_module = getattr(sys.modules[__name__], net_name)
-    net = net_module(n_class=n_class, coder=coder, **net_params)
+    net = net_module(n_class=n_class, coder=coder, **net_params, **kwargs)
     loss = MultiboxLoss(coder=coder, **loss_params)
     return net, loss

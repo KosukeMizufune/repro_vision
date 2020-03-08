@@ -8,19 +8,24 @@ from ignite.contrib.handlers import (ProgressBar, global_step_from_engine,
 from ignite.contrib.handlers.tensorboard_logger import OutputHandler
 from ignite.handlers import ModelCheckpoint
 from ignite.engine import Events
+from ignite.utils import convert_tensor
 import torch
 from torch.optim import lr_scheduler
 from tensorboardX import SummaryWriter
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from repro_vision import trainers, evaluations
+from repro_vision import evaluations
 
 
-def get_trainer(net, optimizer, criterion, device, task):
-    module = getattr(trainers, f'create_{task}_trainer')
-    trainer = module(net, optimizer, criterion, device)
-    return trainer
+def prepare_batch(batch, device=None, non_blocking=False):
+    """Prepare batch for training: pass to a device with options.
+    """
+    x, *labels = batch
+    x = convert_tensor(x, device=device, non_blocking=non_blocking)
+    ys = (convert_tensor(label, device=device, non_blocking=non_blocking)
+          for label in labels)
+    return (x, ys)
 
 
 def get_metrics(eval_config):
@@ -31,12 +36,6 @@ def get_metrics(eval_config):
         else:
             metrics[name] = getattr(evaluations, name)()
     return metrics
-
-
-def get_evaluator(net, metrics, device, task):
-    module = getattr(trainers, f'create_{task}_evaluator')
-    evaluator = module(net, metrics, device)
-    return evaluator
 
 
 class TrainExtension:

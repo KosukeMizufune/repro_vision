@@ -3,18 +3,16 @@ from pathlib import Path
 
 import click
 from ruamel import yaml
-from ignite.engine import (Events, create_supervised_evaluator,
-                           create_supervised_trainer)
-from ignite.metrics import Average
+from ignite.engine import Events
 
 from repro_vision.commands.dataset import (get_loaders, get_transforms,
                                            get_labels)
 from repro_vision.commands.optimizer import get_optimizer
 from repro_vision.commands.model import get_net, get_loss
-from repro_vision.commands.trainer import (prepare_batch,
+from repro_vision.commands.trainer import (get_trainer, get_evaluator,
                                            get_metrics, TrainExtension)
 
-TASK = 'classification'
+TASK = 'detection'
 
 logger = getLogger(__name__)
 
@@ -45,14 +43,10 @@ def main(ctx, config_file, dataset_root, res_root_dir, debug, device,
     criterion = get_loss(**config['loss'], logger=logger)
     optimizer = get_optimizer(net, **config['optimizer'])
 
-    trainer = create_supervised_trainer(net, optimizer, criterion, device,
-                                        prepare_batch=prepare_batch)
-    metric_loss = Average()
-    metric_loss.attach(trainer, 'loss')
+    trainer = get_trainer(net, optimizer, criterion, device, TASK)
     metrics = get_metrics(config['evaluate'])
     metric_names = list(metrics.keys())
-    evaluator = create_supervised_evaluator(net, metrics, device,
-                                            prepare_batch=prepare_batch)
+    evaluator = get_evaluator(net, metrics, device, TASK)
 
     @trainer.on(Events.EPOCH_COMPLETED)
     def compute_metrics(engine):

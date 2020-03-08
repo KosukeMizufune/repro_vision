@@ -1,22 +1,14 @@
 import torch
 
-from ignite.engine.engine import Engine
-from ignite.utils import convert_tensor
-from ignite.metrics import Average
 
 
-def _prepare_batch(batch, device=None, non_blocking=False):
-    """Prepare batch for training: pass to a device with options.
-    """
-    x, y = batch
-    return (convert_tensor(x, device=device, non_blocking=non_blocking),
-            convert_tensor(y, device=device, non_blocking=non_blocking))
 
 
-def create_classification_trainer(model, optimizer, loss_fn,
-                                  device=None, non_blocking=False,
-                                  prepare_batch=_prepare_batch,
-                                  output_transform=lambda x, y, y_pred, loss: loss.item()):  # noqa
+
+
+def create_supervised_trainer(model, optimizer, loss_fn,
+                              device=None, non_blocking=False,
+                              prepare_batch=_prepare_batch):
     """
     Factory function for creating a trainer for supervised models.
     Args:
@@ -44,21 +36,18 @@ def create_classification_trainer(model, optimizer, loss_fn,
         optimizer.zero_grad()
         x, y = prepare_batch(batch, device=device, non_blocking=non_blocking)
         y_pred = model(x)
-        loss = loss_fn(y_pred, y)
+        loss = loss_fn(*y_pred, *y)
         loss.backward()
         optimizer.step()
-        return output_transform(x, y, y_pred, loss)
+        return loss.item()
 
     engine = Engine(_update)
-    metric_loss = Average()
-    metric_loss.attach(engine, 'loss')
     return engine
 
 
-def create_classification_evaluator(model, metrics=None,
-                                    device=None, non_blocking=False,
-                                    prepare_batch=_prepare_batch,
-                                    output_transform=lambda x, y, y_pred: (y_pred, y,)):
+def create_supervised_evaluator(model, metrics=None,
+                                device=None, non_blocking=False,
+                                prepare_batch=_prepare_batch):
     """
     Factory function for creating an evaluator for supervised models.
     Args:
@@ -89,7 +78,7 @@ def create_classification_evaluator(model, metrics=None,
             x, y = prepare_batch(batch, device=device,
                                  non_blocking=non_blocking)
             y_pred = model(x)
-            return output_transform(x, y, y_pred)
+            return (y_pred, y)
 
     engine = Engine(_inference)
 

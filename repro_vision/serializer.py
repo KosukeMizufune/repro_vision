@@ -14,7 +14,7 @@ def rgetattr(obj, attr, *args):
     return functools.reduce(_getattr, [obj] + attr.split('.'))
 
 
-def load_pth(model, params, correspondence):
+def load_pth(model, params, correspondence=None):
     """Load PyTorch weight file `*.pth`.
     Since parameter names in weight file are sometimes different from model
     parameter names, correspondence argument is used for its compatibility.

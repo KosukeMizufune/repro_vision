@@ -1,21 +1,64 @@
 from datetime import datetime
 import shutil
 from pathlib import Path
+import collections.abc as collections
 
 from ignite.contrib.handlers import (ProgressBar, global_step_from_engine,
                                      TensorboardLogger, LRScheduler,
                                      create_lr_scheduler_with_warmup)
 from ignite.contrib.handlers.tensorboard_logger import OutputHandler
 from ignite.handlers import ModelCheckpoint
-from ignite.engine import Events
-from ignite.utils import convert_tensor
+from ignite.engine import Events, Engine
 import torch
+from torch._six import string_classes
 from torch.optim import lr_scheduler
 from tensorboardX import SummaryWriter
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
 from repro_vision import evaluations
+
+
+def convert_tensor(input_, device=None, non_blocking=False):
+    """Move tensors to relevant device."""
+    def _func(tensor):
+        return tensor.to(device=device, non_blocking=non_blocking) if device else tensor
+
+    return apply_to_tensor(input_, _func)
+
+
+def apply_to_tensor(input_, func):
+    """Apply a function on a tensor or mapping, or sequence of tensors.
+    """
+    return apply_to_type(input_, torch.Tensor, func)
+
+
+def apply_to_type(input_, input_type, func):
+    """Apply a function on a object of `input_type` or mapping, or sequence of objects of `input_type`.
+    """
+    if isinstance(input_, input_type):
+        return func(input_)
+    elif isinstance(input_, string_classes) or isinstance(input_, np.ndarray):
+        return input_
+    elif isinstance(input_, collections.Mapping):
+        return {k: apply_to_type(sample, input_type, func) for k, sample in input_.items()}
+    elif isinstance(input_, collections.Sequence):
+        return [apply_to_type(sample, input_type, func) for sample in input_]
+    else:
+        raise TypeError(("input must contain {}, dicts or lists; found {}"
+                         .format(input_type, type(input_))))
+
+
+def to_onehot(indices, num_classes):
+    """Convert a tensor of indices of any shape `(N, ...)` to a
+    tensor of one-hot indicators of shape `(N, num_classes, ...) and of type uint8. Output's device is equal to the
+    input's device`.
+    """
+    onehot = torch.zeros(indices.shape[0], num_classes, *indices.shape[1:],
+                         dtype=torch.uint8,
+                         device=indices.device)
+    return onehot.scatter_(1, indices.unsqueeze(1), 1)
 
 
 def prepare_batch(batch, device=None, non_blocking=False):
@@ -23,19 +66,73 @@ def prepare_batch(batch, device=None, non_blocking=False):
     """
     x, *labels = batch
     x = convert_tensor(x, device=device, non_blocking=non_blocking)
-    ys = (convert_tensor(label, device=device, non_blocking=non_blocking)
-          for label in labels)
-    return (x, ys)
+    if len(labels) == 1:
+        y = convert_tensor(labels[0], device=device, non_blocking=non_blocking)
+    else:
+        y = [convert_tensor(label, device=device, non_blocking=non_blocking)
+             for label in labels]
+    return (x, y)
 
 
-def get_metrics(eval_config):
+def get_metrics(labels, eval_config):
     metrics = dict()
     for name, params in eval_config.items():
         if params:
-            metrics[name] = getattr(evaluations, name)(**params)
+            metrics[name] = getattr(evaluations, name)(labels=labels, **params)
         else:
-            metrics[name] = getattr(evaluations, name)()
+            metrics[name] = getattr(evaluations, name)(labels=labels)
     return metrics
+
+
+def create_supervised_evaluator(model, metrics=None, device=None,
+                                non_blocking=False,
+                                prepare_batch=prepare_batch):
+    """
+    Factory function for creating an evaluator for supervised models.
+    Args:
+        model (`torch.nn.Module`): the model to train.
+        metrics (dict of str - :class:`~ignite.metrics.Metric`): a map of
+            metric names to Metrics.
+        device (str, optional): device type specification (default: None).
+            Applies to both model and batches.
+        non_blocking (bool, optional): if True and this copy is between CPU and
+            GPU, the copy may occur asynchronously with respect to the host.
+            For other cases, this argument has no effect.
+        prepare_batch (callable, optional): function that receives `batch`,
+            `device`, `non_blocking` and outputs tuple of tensors
+            `(batch_x, batch_y)`.
+        output_transform (callable, optional): function that receives 'x', 'y',
+            'y_pred' and returns value to be assigned to engine's state.output
+            after each iteration. Default is returning `(y_pred, y,)` which
+            fits output expected by metrics. If you change it you should use
+            `output_transform` in metrics.
+    Note:
+        `engine.state.output` for this engine is defind by `output_transform`
+        parameter and is a tuple of `(batch_pred, batch_y)` by default.
+    Returns:
+        Engine: an evaluator engine with supervised inference function.
+    """
+    metrics = metrics or {}
+
+    if isinstance(model, torch.nn.DataParallel):
+        model = model.module
+    if device:
+        model.to(device)
+
+    def _inference(engine, batch):
+        model.eval()
+        with torch.no_grad():
+            img, targets = prepare_batch(
+                batch, device=device, non_blocking=non_blocking
+            )
+            preds = model.predict(img)
+        return (preds, targets)
+
+    engine = Engine(_inference)
+
+    for name, metric in metrics.items():
+        metric.attach(engine, name)
+    return engine
 
 
 class TrainExtension:

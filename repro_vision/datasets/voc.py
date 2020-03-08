@@ -5,6 +5,8 @@ import numpy as np
 from torchvision.datasets.vision import VisionDataset
 from PIL import Image
 
+from repro_vision.collate import collate_detection_train, collate_detection_val
+
 
 class VOCDetection(VisionDataset):
     """`Pascal VOC <http://host.robots.ox.ac.uk/pascal/VOC/>`_ Detection Dataset.
@@ -25,23 +27,24 @@ class VOCDetection(VisionDataset):
             A function/transform that takes input sample and its target as
             entry and returns a transformed version.
     """
+
     def __init__(self,
                  root,
-                 year='2012',
                  image_set='train',
-                 use_difficult=False,
-                 return_difficult=False,
                  transform=None,
                  target_transform=None,
                  transforms=None):
         super(VOCDetection, self).__init__(root, transforms, transform,
                                            target_transform)
-        if year == '2007' and image_set == 'test':
-            year = '2007_test'
+        if image_set == "train":
+            year = '2012'
+        else:
+            year = '2007'
+            image_set = "test"
         self.year = year
         self.image_set = image_set
-        self.use_difficult = use_difficult
-        self.return_difficult = return_difficult
+        self.return_difficult = False
+        self.use_difficult = False
 
         base_dir = f"VOCdevkit/VOC{year}"
         voc_root = Path(self.root) / base_dir
@@ -49,6 +52,8 @@ class VOCDetection(VisionDataset):
         annotation_dir = voc_root / 'Annotations'
 
         split_file = voc_root / f'ImageSets/Main/{image_set}.txt'
+        self.collate_fn = collate_detection_train if image_set == "train" \
+            else collate_detection_val
 
         with open(split_file, "r") as f:
             file_names = [x.strip() for x in f.readlines()]
@@ -92,9 +97,9 @@ class VOCDetection(VisionDataset):
 
         if self.transforms is not None:
             img, bbox, label, difficult = \
-                self.transforms(img, bbox, label, difficult)
+                self.transforms((img, bbox, label, difficult))
         if self.return_difficult:
-            return img, bbox, label, difficult
+            return (img, bbox, label, difficult)
         return img, bbox, label
 
     def __len__(self):

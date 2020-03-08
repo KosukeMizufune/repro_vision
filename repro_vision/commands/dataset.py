@@ -1,25 +1,26 @@
 from torch.utils.data import DataLoader
 
-from repro_vision import datasets
-from repro_vision.transforms import transforms, Compose
+from repro_vision import datasets, transforms
 
 
-def get_dataset(dataset_name, dataset_root="data", train=True, transforms=None,
-                **kwargs):
+def get_dataset(dataset_name, dataset_root="data", image_set="train",
+                transform_funs=None, **kwargs):
     dataset_klass = getattr(datasets, dataset_name)
-    dataset = dataset_klass(dataset_root, train=train, transforms=transforms,
-                            **kwargs)
+    dataset = dataset_klass(dataset_root, image_set=image_set,
+                            transforms=transform_funs, **kwargs)
     return dataset
 
 
 def get_transforms(config):
+    if config is None:
+        return None
     transform_list = []
     for name, params in config.items():
         if params:
             transform_list.append(getattr(transforms, name)(**params))
         else:
             transform_list.append(getattr(transforms, name)())
-    return Compose(transform_list)
+    return transforms.Compose(transform_list)
 
 
 def get_loaders(dataset_name, dataset_root="data", train_transforms=None,
@@ -31,15 +32,17 @@ def get_loaders(dataset_name, dataset_root="data", train_transforms=None,
         tuple: train and test ``DataLoader`` class.
     """
     train_dataset = get_dataset(dataset_name, dataset_root,
-                                transforms=train_transforms, **kwargs)
-    val_dataset = get_dataset(dataset_name, dataset_root, train=False,
-                              transforms=val_transforms, **kwargs)
+                                transform_funs=train_transforms, **kwargs)
+    val_dataset = get_dataset(dataset_name, dataset_root, image_set='val',
+                              transform_funs=val_transforms, **kwargs)
 
     train_loader = DataLoader(train_dataset, batchsize,
                               num_workers=num_workers,
+                              collate_fn=train_dataset.collate_fn,
                               shuffle=True)
     val_loader = DataLoader(val_dataset, batchsize,
                             num_workers=num_workers,
+                            collate_fn=val_dataset.collate_fn,
                             shuffle=False)
     return train_loader, val_loader
 

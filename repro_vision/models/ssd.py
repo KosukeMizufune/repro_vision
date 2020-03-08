@@ -100,8 +100,18 @@ class MultiboxCoder(object):
 
     def to(self, device):
         self._default_bbox = self._default_bbox.to(device)
+    
+    def encode(self, bboxes, labels, iou_thresh=0.5, device=None):
+        encoded_bboxes, encoded_labels = [], []
+        for bbox, label in zip(bboxes, labels):
+            encoded_bbox, encoded_label = \
+                self._encode(bbox, label, iou_thresh, device)
+            encoded_bboxes.append(encoded_bbox)
+            encoded_labels.append(encoded_label)
+        return torch.stack(encoded_bboxes), torch.stack(encoded_labels)
 
-    def encode(self, bbox, label, iou_thresh=0.5):
+
+    def _encode(self, bbox, label, iou_thresh=0.5, device=None):
         """Encodes coordinates and classes of bounding boxes.
         This method encodes :obj:`bbox` and :obj:`label` to :obj:`mb_loc`
         and :obj:`mb_label`, which are used to compute multibox loss.
@@ -124,7 +134,6 @@ class MultiboxCoder(object):
                 where :math:`K` is the number of default bounding boxes.
             * **mb_label**: An integer tensor of shape :math:`(K,)`.
         """
-        device = bbox.device
         if len(bbox) == 0:
             return (
                 torch.zeros(self._default_bbox.shape).to(bbox),
@@ -385,10 +394,13 @@ class SSD(nn.Module):
 
         return bboxes, labels, scores
 
-    def init_weight(self, correspondence_file, weight_file):
-        with open(correspondence_file, "r", encoding="utf-8") as f:
-            correspondence = json.load(f)
-        load_pth(self, torch.load(weight_file), correspondence)     
+    def init_weight(self, correspondence_file=None, weight_file=None):
+        correspondence = None
+        if correspondence_file:
+            with open(correspondence_file, "r", encoding="utf-8") as f:
+                correspondence = json.load(f)
+        if weight_file:
+            load_pth(self, torch.load(weight_file), correspondence)     
 
     @staticmethod
     def _check_input_size(self, x):
@@ -563,8 +575,8 @@ class MultiBox(nn.Module):
 
 
 class SSD300(SSD):
-    def __init__(self, n_class, multibox_coder, correspondence_file,
-                 weight_file):
+    def __init__(self, n_class, coder,
+                 correspondence_file=None, weight_file=None):
         """Single Shot Multibox Detector with 300x300 inputs.
         This is a model of Single Shot Multibox Detector [#]_.
         This model uses :class:`VGGExtractor300` as its feature extractor.
@@ -577,7 +589,7 @@ class SSD300(SSD):
             multibox=MultiBox(
                 n_class=n_class + 1,
                 aspect_ratios=((2,), (2, 3), (2, 3), (2, 3), (2,), (2,))),
-            config_multibox=multibox_coder,
+            coder=coder,
             mean=_imagenet_mean)
         self.in_size = 300
         self.init_weight(correspondence_file, weight_file)
@@ -671,17 +683,24 @@ class MultiboxLoss(nn.Module):
         self.alpha = alpha
         self.coder = coder
 
-    def forward(self, preds, bboxes, labels):
+    def forward(self, preds, targets):
         mb_locs, mb_confs = preds
-        gt_mb_locs, gt_mb_labels = self.coder.encode(bboxes, labels)
+        bboxes, labels = targets
+        gt_mb_locs, gt_mb_labels = \
+            self.coder.encode(bboxes, labels, device=mb_locs.device)
         loc_loss, class_loss = multibox_loss(mb_locs, mb_confs, gt_mb_locs,
                                              gt_mb_labels, self.k)
         loss = loc_loss * self.alpha + class_loss
         return loss
 
 
-def get_model(net_name, net_params, loss_params, coder_params, logger=None):
+def get_model(net_name, net_params, loss_params, n_class, coder_params,
+              logger=None, **kwargs):
+    net_params = net_params if net_params else {}
+    loss_params = loss_params if loss_params else {}
+
     coder = MultiboxCoder(**coder_params)
-    net = getattr(sys.modules[__name__], net_name)(coder=coder, **net_params)
+    net_module = getattr(sys.modules[__name__], net_name)
+    net = net_module(n_class=n_class, coder=coder, **net_params)
     loss = MultiboxLoss(coder=coder, **loss_params)
     return net, loss

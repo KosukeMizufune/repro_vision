@@ -9,6 +9,8 @@ from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import (check_integrity,
                                         download_and_extract_archive)
 
+from repro_vision.collate import collate_classification
+
 
 class CIFAR10(VisionDataset):
     """`CIFAR10 <https://www.cs.toronto.edu/~kriz/cifar.html>`_ Dataset.
@@ -50,13 +52,13 @@ class CIFAR10(VisionDataset):
         'md5': '5ff9c542aee3614f3951f8cda6e48888',
     }
 
-    def __init__(self, root, train=True, transform=None, target_transform=None,
+    def __init__(self, root, image_set="train", transform=None, target_transform=None,
                  transforms=None, download=False):
 
         super(CIFAR10, self).__init__(root, transforms, transform,
                                       target_transform)
 
-        self.train = train  # training set or test set
+        self.train = image_set == "train"  # training set or test set
 
         if download:
             self.download()
@@ -72,6 +74,7 @@ class CIFAR10(VisionDataset):
 
         self.data = []
         self.targets = []
+        self.collate_fn = collate_classification
 
         # now load the picked numpy arrays
         for file_name, checksum in downloaded_list:

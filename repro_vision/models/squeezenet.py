@@ -1,9 +1,12 @@
 import logging
+import sys
 
 import torch
 from torch import nn
 from torch.nn import init
 from torch.hub import load_state_dict_from_url
+
+from repro_vision.functions.loss import CrossEntropyLoss
 
 model_urls = {
     'squeezenet1_0': 'https://download.pytorch.org/models/'
@@ -111,3 +114,12 @@ class SqueezeNet11(SqueezeNetBase):
         self._init_params()
         if pretrained:
             self.fine_tuning('1_1', progress)
+
+
+def get_model(net_name, net_params, loss_params, n_class, logger=None,
+              **kwargs):
+    net_params = net_params if net_params else {}
+    loss_params = loss_params if loss_params else {}
+    net = getattr(sys.modules[__name__], net_name)(n_class=n_class, **net_params)  # noqa
+    loss = CrossEntropyLoss(**loss_params)
+    return net, loss

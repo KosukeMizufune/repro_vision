@@ -1,14 +1,11 @@
 import logging
 
 from repro_vision import models
-from repro_vision.functions import loss
 
 
-def get_net(n_class, name, params={}, logger=None):
+def get_model(model_name, net_name, net_params, loss_params, n_class,
+              logger=None, **kwargs):
     logger = logger or logging.getLogger(__name__)
-    return getattr(models, name)(n_class=n_class, logger=logger, **params)
-
-
-def get_loss(name, params={}, logger=None):
-    logger = logger or logging.getLogger(__name__)
-    return getattr(loss, name)(logger=logger, **params)
+    module = getattr(models, model_name)
+    return module.get_model(net_name, net_params, loss_params, n_class,
+                            logger=logger, **kwargs)

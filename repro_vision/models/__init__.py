@@ -1,1 +1,1 @@
-from repro_vision.models.squeezenet import SqueezeNet11  # noqa
+from repro_vision.models import ssd, squeezenet  # noqa

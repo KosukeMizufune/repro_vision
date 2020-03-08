@@ -3,18 +3,15 @@ from pathlib import Path
 
 import click
 from ruamel import yaml
-from ignite.engine import (Events, create_supervised_evaluator,
-                           create_supervised_trainer)
+from ignite.engine import create_supervised_trainer, Events
 from ignite.metrics import Average
 
 from repro_vision.commands.dataset import (get_loaders, get_transforms,
                                            get_labels)
 from repro_vision.commands.optimizer import get_optimizer
-from repro_vision.commands.model import get_net, get_loss
-from repro_vision.commands.trainer import (prepare_batch,
+from repro_vision.commands.model import get_model
+from repro_vision.commands.trainer import (prepare_batch, create_supervised_evaluator,  # noqa
                                            get_metrics, TrainExtension)
-
-TASK = 'classification'
 
 logger = getLogger(__name__)
 
@@ -41,15 +38,14 @@ def main(ctx, config_file, dataset_root, res_root_dir, debug, device,
                                            num_workers=num_workers,
                                            **config['dataset'])
     label_names = get_labels(train_loader)
-    net = get_net(n_class=len(label_names), **config['model'], logger=logger)
-    criterion = get_loss(**config['loss'], logger=logger)
+    net, criterion = get_model(n_class=len(label_names), **config['model'])
     optimizer = get_optimizer(net, **config['optimizer'])
 
     trainer = create_supervised_trainer(net, optimizer, criterion, device,
                                         prepare_batch=prepare_batch)
     metric_loss = Average()
     metric_loss.attach(trainer, 'loss')
-    metrics = get_metrics(config['evaluate'])
+    metrics = get_metrics(label_names, config['evaluate'])
     metric_names = list(metrics.keys())
     evaluator = create_supervised_evaluator(net, metrics, device,
                                             prepare_batch=prepare_batch)

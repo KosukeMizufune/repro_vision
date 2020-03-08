@@ -1,6 +1,6 @@
 import click
 
-from repro_vision.commands import classification
+from repro_vision.commands import classification, download
 
 
 __version__ = '0.1.0'
@@ -15,3 +15,4 @@ def main(ctx, **kwargs):
 
 
 main.add_command(classification.main, 'classification')
+main.add_command(download.main, 'download')

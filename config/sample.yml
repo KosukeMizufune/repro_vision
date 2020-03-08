@@ -17,10 +17,11 @@ dataset:
   dataset_name: CIFAR10
 
 model:
-  name: SqueezeNet11
+  model_name: squeezenet
+  net_name: SqueezeNet11
+  net_params:
+  loss_params: 
 
-loss:
-  name: CrossEntropyLoss
 
 optimizer:
   name: SGD

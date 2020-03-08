@@ -1,0 +1,65 @@
+train_augment:
+  RandomHorizontalFlipWithBbox:
+    p: 0.5
+  RandomCropWithBbox:
+    min_scale: 0.3
+    max_scale: 1
+    max_aspect_ratio: 2
+    constraints:
+    max_trial: 50
+  ResizeWithBbox:
+    size: 300
+  NormalizeWithBbox:
+    mean: [104, 117, 123]
+    std: [1, 1, 1]
+  ToTensorWithBbox:
+
+val_augment:
+
+dataset:
+  batchsize: 32
+  dataset_name: VOCDetection
+
+#model:
+#  model_name: squeezenet
+#  net_name: SqueezeNet11
+#  net_params:
+#  loss_params: 
+
+
+model:
+  model_name: ssd
+  net_name: SSD300
+  net_params:
+  loss_params:
+  coder_params: 
+    grids: [38, 19, 10, 5, 3, 1]
+    aspect_ratios: [[2,], [2, 3], [2, 3], [2, 3], [2,], [2,]]
+    steps: [8, 16, 32, 64, 100, 300]
+    sizes: [30, 60, 111, 162, 213, 264, 315]
+    variance: [0.1, 0.2]
+  correspondence_file: 'config/ssd_correspondence.json'
+  weight_file: models/ssd_300_VOC0712.pth
+
+optimizer:
+  name: SGD
+  params:
+    lr: 0.001
+    momentum: 0.9
+    weight_decay: 0.0005
+
+lr_schedule:
+  name: StepLR
+  params:
+    step_size: 100
+    gamma: 0.1
+
+evaluate:
+  AveragePrecision:
+
+model_checkpoint:
+  save_interval: 5
+  n_saved: 1
+
+
+epochs: 10
